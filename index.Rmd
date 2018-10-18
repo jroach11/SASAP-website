@@ -9,22 +9,54 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(leaflet)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(DT)
 ```
 
-## Including Plots
+#Read in data
 
-You can also embed plots, for example:
+```{r}
+esc <- read.csv('D:/SASAP_workshop/SASAP-website/data/escapement_counts.csv')
+head(esc)
+```
+#Median Escapement Table
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+median_esc <- esc %>% 
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>% 
+  group_by(Species, SASAP.Region, Year, Location) %>% 
+  summarize(escapement = sum(DailyCount)) %>% 
+  group_by(Species) %>% 
+  summarize(median_escapement = median(escapement))
+datatable(median_esc)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#Bar Plot
+
+```{r}
+ggplot(median_esc, aes(Species, median_escapement)) +
+  geom_col() +
+  coord_flip()
+```
+
+#Unique Locations
+
+```{r}
+locations <- esc %>% 
+  distinct(Location, Latitude, Longitude) %>% 
+  drop_na()
+datatable(locations)
+```
+
+#Leaflet Map
+
+```{r}
+leaflet(locations) %>% 
+  addTiles() %>% 
+  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location)
+```
+
